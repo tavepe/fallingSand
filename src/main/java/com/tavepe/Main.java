@@ -1,89 +1,124 @@
 package com.tavepe;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import org.lwjgl.*;
+import org.lwjgl.opengl.*;
 
-public class Main extends JPanel implements ActionListener, MouseListener, MouseMotionListener {
+import java.nio.*;
+
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.system.MemoryUtil.*;
+
+public class Main {
+
     final int WIDTH = 100, HEIGHT = 100, SIZE = 6;
-    int[][] mundo = new int[WIDTH][HEIGHT];
-    Timer timer = new Timer(30, this);
+    int[][] world = new int[WIDTH][HEIGHT];
 
-    public Main() {
-        setPreferredSize(new Dimension(WIDTH * SIZE, HEIGHT * SIZE));
-        addMouseListener(this);
-        addMouseMotionListener( this);
-        timer.start();
+    private long window;
+
+    public void run() {
+        init();
+        loop();
+
+        glfwDestroyWindow(window);
+        glfwTerminate();
     }
 
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
+    private void init() {
+        if (!glfwInit()) {
+            throw new IllegalStateException("Não foi possível inicializar o GLFW");
+        }
+
+        window = glfwCreateWindow(WIDTH * SIZE, HEIGHT * SIZE, "Simulação de Areia", NULL, NULL);
+        if (window == NULL) {
+            throw new RuntimeException("Falha ao criar janela GLFW");
+        }
+
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1); // V-Sync
+
+        GL.createCapabilities();
+    }
+
+    private void loop() {
+        while (!glfwWindowShouldClose(window)) {
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            refreshWorld();
+            render();
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+
+            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+                DoubleBuffer xpos = BufferUtils.createDoubleBuffer(1);
+                DoubleBuffer ypos = BufferUtils.createDoubleBuffer(1);
+                glfwGetCursorPos(window, xpos, ypos);
+                int x = (int) (xpos.get(0) / SIZE);
+                int y = (int) (ypos.get(0) / SIZE);
+
+
+
+                if (x >= 2 && x < WIDTH - 2 && y >= 0 && y < HEIGHT) {
+                    world[x][y] = 1;
+                }
+            }
+        }
+    }
+
+    private void render() {
         for (int x = 0; x < WIDTH; x++) {
             for (int y = 0; y < HEIGHT; y++) {
-                if (mundo[x][y] == 1) {
-                    g.setColor(Color.YELLOW);
+                if (world[x][y] == 1) {
+                    glColor3f(1f, 1f, 0f); // Amarelo
                 } else {
-                    g.setColor(Color.BLACK);
+                    glColor3f(0f, 0f, 0f); // Preto
                 }
-                g.fillRect(x * SIZE, y * SIZE, SIZE, SIZE);
+
+                float xf = x * SIZE;
+                float yf = (HEIGHT - 1 - y) * SIZE;
+
+
+                float winWidth = WIDTH * SIZE;
+                float winHeight = HEIGHT * SIZE;
+
+                // Normalizar para OpenGL (-1 a 1)
+                float x0 = (2f * xf) / winWidth - 1f;
+                float y0 = (2f * yf) / winHeight - 1f;
+                float x1 = (2f * (xf + SIZE)) / winWidth - 1f;
+                float y1 = (2f * (yf + SIZE)) / winHeight - 1f;
+
+                glBegin(GL_QUADS);
+                glVertex2f(x0, y0);
+                glVertex2f(x1, y0);
+                glVertex2f(x1, y1);
+                glVertex2f(x0, y1);
+                glEnd();
             }
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        refreshWorld();
-        repaint();
-    }
-
-    void refreshWorld() {
+    private void refreshWorld() {
         for (int y = HEIGHT - 3; y >= 0; y--) {
-            for (int x = 2; x < WIDTH-2; x++) {
-                if (mundo[x][y] == 1 && mundo[x][y + 1] == 0) {
-                    mundo[x][y + 1] = 1;
-                    mundo[x][y] = 0;
-                } else if (mundo[x][y] == 1 && mundo[x][y+2]==1){
-                    if(mundo[x + 1][y + 1] == 0){
-                        mundo[x][y] = 0;
-                        mundo[x+1][y] = 1;
+            for (int x = 2; x < WIDTH - 2; x++) {
+                if (world[x][y] == 1 && world[x][y + 1] == 0) {
+                    world[x][y + 1] = 1;
+                    world[x][y] = 0;
+                } else if (world[x][y] == 1 && world[x][y + 2] == 1) {
+                    if (world[x + 1][y + 1] == 0) {
+                        world[x][y] = 0;
+                        world[x + 1][y] = 1;
                     }
-                    if(mundo[x - 1][y + 1] == 0){
-                        mundo[x][y] = 0;
-                        mundo[x-1][y] = 1;
+                    if (world[x - 1][y + 1] == 0) {
+                        world[x][y] = 0;
+                        world[x - 1][y] = 1;
                     }
                 }
             }
         }
     }
-
-    @Override
-    public void mousePressed(MouseEvent e) {
-        int x = e.getX() / SIZE;
-        int y = e.getY() / SIZE;
-        if (x >= 2 && x < WIDTH-2 && y >= 0 && y < HEIGHT)
-            mundo[x][y] = 1;
-    }
-
-    @Override
-    public void mouseDragged(MouseEvent e) {
-        int x = e.getX() / SIZE;
-        int y = e.getY() / SIZE;
-        if (x >= 2 && x < WIDTH-2 && y >= 0 && y < HEIGHT)
-            mundo[x][y] = 1;
-    }
-    public void mouseReleased(MouseEvent e) {}
-    public void mouseClicked(MouseEvent e) {}
-    public void mouseEntered(MouseEvent e) {}
-    public void mouseExited(MouseEvent e) {}
-    public void mouseMoved(MouseEvent e) {}
-
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Simulação de Areia");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.add(new Main());
-        frame.pack();
-        frame.setVisible(true);
+        new Main().run();
     }
 }
