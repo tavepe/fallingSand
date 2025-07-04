@@ -12,11 +12,16 @@ import static org.lwjgl.system.MemoryUtil.*;
 public class Main {
 
     final int WIDTH = 100, HEIGHT = 100, SIZE = 6;
-    int[][] world = new int[WIDTH][HEIGHT];
+    Pixel[][] world = new Pixel[WIDTH][HEIGHT];
 
     private long window;
 
     public void run() {
+        for (int i = 0; i < WIDTH; i++) {
+            for (int j = 0; j < HEIGHT; j++) {
+                world[i][j] = new Air(); // Properly initialize the world array with Air objects
+            }
+        }
         init();
         loop();
 
@@ -58,9 +63,8 @@ public class Main {
                 int y = (int) (ypos.get(0) / SIZE);
 
 
-
                 if (x >= 2 && x < WIDTH - 2 && y >= 0 && y < HEIGHT) {
-                    world[x][y] = 1;
+                    world[x][y] = new Sand();
                 }
             }
         }
@@ -69,11 +73,9 @@ public class Main {
     private void render() {
         for (int x = 0; x < WIDTH; x++) {
             for (int y = 0; y < HEIGHT; y++) {
-                if (world[x][y] == 1) {
-                    glColor3f(1f, 1f, 0f); // Amarelo
-                } else {
-                    glColor3f(0f, 0f, 0f); // Preto
-                }
+
+                glColor3f(world[x][y].getColor()[0], world[x][y].getColor()[1], world[x][y].getColor()[2]); // Amarelo
+
 
                 float xf = x * SIZE;
                 float yf = (HEIGHT - 1 - y) * SIZE;
@@ -101,17 +103,17 @@ public class Main {
     private void refreshWorld() {
         for (int y = HEIGHT - 3; y >= 0; y--) {
             for (int x = 2; x < WIDTH - 2; x++) {
-                if (world[x][y] == 1 && world[x][y + 1] == 0) {
-                    world[x][y + 1] = 1;
-                    world[x][y] = 0;
-                } else if (world[x][y] == 1 && world[x][y + 2] == 1) {
-                    if (world[x + 1][y + 1] == 0) {
-                        world[x][y] = 0;
-                        world[x + 1][y] = 1;
+                if (world[x][y].getId() == 1 && world[x][y + 1].getId() == 0) {
+                    world[x][y + 1] = new Sand();
+                    world[x][y] = new Air();
+                } else if (world[x][y].getId() == 1 && world[x][y + 2].getId() == 1) {
+                    if (world[x + 1][y + 1].getId() == 0) {
+                        world[x][y] = new Air();
+                        world[x + 1][y] = new Sand();
                     }
-                    if (world[x - 1][y + 1] == 0) {
-                        world[x][y] = 0;
-                        world[x - 1][y] = 1;
+                    if (world[x - 1][y + 1].getId() == 0) {
+                        world[x][y] = new Air();
+                        world[x - 1][y] = new Sand();
                     }
                 }
             }
